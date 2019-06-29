@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({
 }))
 
 //about
-app.get('/about', function(req, res) {
+app.get('/bus_routes', function(req, res) {
   res.render('home/index');
   // res.render('404');
 });
@@ -29,6 +29,7 @@ app.get('/', (request, response) => {
 })
 
 app.get('/search', db.getBusSuggestion)
+app.get('/bus_search_form', db.getBusRoutes)
 
 app.get('/buses', db.getBuses)
 app.get('/buses/:id', db.getBusesById)

@@ -8,10 +8,7 @@
   $(document).ready(function() {
     $('input.typeahead').typeahead({
       name: 'typeahead',
-      matcher: function(item) {
-        console.log(this.query);
-        return this.__proto__.matcher.call(this, item.split("|")[1]);
-      },
+      limit: 20,
       remote: 'search?key=%QUERY',
     });
   });
