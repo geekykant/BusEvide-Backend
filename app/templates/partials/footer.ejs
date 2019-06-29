@@ -1,0 +1,18 @@
+<!-- Scripts for Bootstrap -->
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="http://netsh.pp.ua/upwork-demo/1/js/typeahead.js"></script>
+
+<script>
+  $(document).ready(function() {
+    $('input.typeahead').typeahead({
+      name: 'typeahead',
+      matcher: function(item) {
+        console.log(this.query);
+        return this.__proto__.matcher.call(this, item.split("|")[1]);
+      },
+      remote: 'search?key=%QUERY',
+    });
+  });
+</script>

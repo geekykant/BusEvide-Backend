@@ -22,5 +22,6 @@
     "express": "^4.16.4",
     "pg": "^7.9.0"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "main": "index.js"
 }
