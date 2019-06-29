@@ -1,0 +1,26 @@
+{
+  "name": "bus-api",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "nodemon app/index.js",
+    "deploy": "NODE_ENV=production node app/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geekykant/Bus-API.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/geekykant/Bus-API/issues"
+  },
+  "homepage": "https://github.com/geekykant/Bus-API#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "compression": "^1.7.4",
+    "express": "^4.16.4",
+    "pg": "^7.9.0"
+  },
+  "devDependencies": {}
+}
