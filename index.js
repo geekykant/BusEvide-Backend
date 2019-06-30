@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({
 }))
 
 //about
-app.get('/bus_routes', function(req, res) {
+app.get('/about', function(req, res) {
   res.render('home/index');
   // res.render('404');
 });
