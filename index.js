@@ -28,6 +28,8 @@ app.get('/', (request, response) => {
   })
 })
 
+app.get('/api/from_buses', db.getAPIBusesFrom)
+
 app.get('/search', db.getBusSuggestion)
 app.get('/bus_search_form', db.getBusRoutes)
 

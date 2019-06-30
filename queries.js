@@ -60,11 +60,22 @@ const getBusesById = (request, response) => {
 
 const getBusSuggestion = (req, res) => {
   // console.log(`key: ${req.query.key}`)
-  pool.query(`SELECT from_location from bus_list WHERE upper(from_location) like '` + req.query.key.toUpperCase() + `%' order by upper(from_location) asc`, (err, results) => {
+  pool.query(`SELECT bus_stops from bus_locations WHERE upper(bus_stops) like '` + req.query.key.toUpperCase() + `%' order by upper(bus_stops) asc`, (err, results) => {
     if (err) throw err;
     var data = [];
     for (i = 0; i < results.rows.length; i++) {
-      data.push(results.rows[i]["from_location"]);
+      data.push(results.rows[i]["bus_stops"]);
+    }
+    res.end(JSON.stringify(data));
+  })
+}
+
+const getAPIBusesFrom = (req, res) => {
+  pool.query(`SELECT bus_stops from bus_locations order by upper(bus_stops) asc`, (err, results) => {
+    if (err) throw err;
+    var data = [];
+    for (i = 0; i < results.rows.length; i++) {
+      data.push(results.rows[i]["bus_stops"]);
     }
     res.end(JSON.stringify(data));
   })
@@ -120,6 +131,7 @@ module.exports = {
   getBusesById,
   getBusSuggestion,
   getBusRoutes,
+  getAPIBusesFrom,
   // createUser,
   // updateUser,
   // deleteUser,
