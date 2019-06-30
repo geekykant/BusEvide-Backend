@@ -70,17 +70,6 @@ const getBusSuggestion = (req, res) => {
   })
 }
 
-const getAPIBusesFrom = (req, res) => {
-  pool.query(`SELECT bus_stops from bus_locations order by upper(bus_stops) asc`, (err, results) => {
-    if (err) throw err;
-    var data = [];
-    for (i = 0; i < results.rows.length; i++) {
-      data.push(results.rows[i]["bus_stops"]);
-    }
-    res.end(JSON.stringify(data));
-  })
-}
-
 const getBusRoutes = (req, res) => {
   var to_location = req.query.to_location;
   var from_location = req.query.from_location;
@@ -105,26 +94,28 @@ const getBusRoutes = (req, res) => {
   })
 }
 
-// const updateUser = (request, response) => {
-//   const id = parseInt(request.params.id)
-//   const { name, email } = request.body
-//   pool.query(
-//     'UPDATE users SET name = $1, email = $2 WHERE id = $3',
-//     [name, email, id],
-//     (error, results) => {
-//       if (error) throw error
-//       response.status(200).send(`User modified with ID: ${id}`)
-//     }
-//   )
-// }
+// API FOR App
+const getAPIBusesFrom = (req, res) => {
+  pool.query(`SELECT bus_stops from bus_locations order by upper(bus_stops) asc`, (err, results) => {
+    if (err) throw err;
+    var data = [];
+    for (i = 0; i < results.rows.length; i++) {
+      data.push(results.rows[i]["bus_stops"]);
+    }
+    res.end(JSON.stringify(data));
+  })
+}
 
-// const deleteUser = (request, response) => {
-//   const id = parseInt(request.params.id)
-//   pool.query('DELETE FROM users WHERE id = $1', [id], (error, results) => {
-//     if (error) throw error
-//     response.status(200).send(`User deleted with ID: ${id}`)
-//   })
-// }
+const getAPIBusesTypes = (req, res) => {
+  pool.query(`select distinct bus_type from bus_list order by bus_type asc;`, (err, results) => {
+    if (err) throw err;
+    var data = [];
+    for (i = 0; i < results.rows.length; i++) {
+      data.push(results.rows[i]["bus_type"].toUpperCase());
+    }
+    res.end(JSON.stringify(data));
+  })
+}
 
 module.exports = {
   getBuses,
@@ -132,6 +123,7 @@ module.exports = {
   getBusSuggestion,
   getBusRoutes,
   getAPIBusesFrom,
+  getAPIBusesTypes,
   // createUser,
   // updateUser,
   // deleteUser,
