@@ -10,14 +10,9 @@ const pool = new Pool({
 
 class Database {
   constructor() {
-    this.connection = new Pool({
-      user: 'sreekant',
-      host: 'localhost',
-      database: 'buses',
-      password: '',
-      port: 5432,
-    });
+    this.connection = pool
   }
+
   query(sql, args) {
     return new Promise((resolve, reject) => {
       this.connection.query(sql, args, (err, rows) => {
@@ -93,9 +88,6 @@ const getBusSuggestion = (req, res) => {
   })
 }
 
-var bus_timings = [];
-var timings = {};
-
 const getBusRoutes = (req, res) => {
   var to_location = req.query.to_location;
   var from_location = req.query.from_location;
@@ -105,55 +97,66 @@ const getBusRoutes = (req, res) => {
     return;
   }
 
-  database.query(`select * from bus_list where upper(bus_route) like upper('%${from_location}%${to_location}%');`)
+  database.query(`select * from bus_list where upper(bus_route) like upper('%${from_location}%${to_location}%') order by bus_code;`)
     .then(results => {
       var bus_rows = results.rows;
 
-      var bus_timings = [];
+      if (bus_rows.length) {
+        var bus_timings = [];
 
-      var promiseArryTo = [];
-      var promiseArryFrom = [];
-      for (var i = 0; i < bus_rows.length; i++) {
-        promiseArryTo.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`));
-        promiseArryFrom.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`));
+        var promiseArryTo = [];
+        var promiseArryFrom = [];
+        for (var i = 0; i < bus_rows.length; i++) {
+          promiseArryTo.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`));
+          promiseArryFrom.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`));
+        }
+
+        var allPromises = [promiseArryFrom, promiseArryTo];
+        Promise.all(allPromises)
+          .then((result) => {
+            Promise.all(result[0])
+              .then((result1) => {
+                for (var i = 0; i < bus_rows.length; i++) {
+                  timings = {};
+                  timings["route_name"] = bus_rows[i]["route_name"];
+                  timings["bus_type"] = bus_rows[i]["bus_type"];
+                  timings["bus_type_code"] = bus_rows[i]["bus_type_code"];
+                  timings["via_route"] = bus_rows[i]["via_route"];
+
+                  timings["bus_code"] = bus_rows[i]["bus_code"];
+                  timings["from_timing"] = result1[i].rows[0]["stop_timing"];
+                  bus_timings.push(timings);
+                }
+              })
+              .then(() => {
+                Promise.all(result[1])
+                  .then((result2) => {
+                    for (var i = 0; i < bus_rows.length; i++) {
+                      bus_timings[i]["to_timing"] = result2[i].rows[0]["stop_timing"];
+                    }
+                  })
+                  .then(() => {
+                    bus_timings.sort((a, b) => {
+                      return a.from_timing.localeCompare(b.from_timing);
+                    });
+                    res.end(JSON.stringify(bus_timings));
+                  })
+                  .catch((error) => {
+                    console.log(error);
+                  });
+              })
+              .catch((error) => {
+                console.log(error);
+              });
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }else{
+        res.end("No buses found!");
       }
-
-      var allPromises = [promiseArryFrom, promiseArryTo];
-      Promise.all(allPromises)
-        .then((result) => {
-          Promise.all(result[0])
-            .then((result1) => {
-              for (var i = 0; i < bus_rows.length; i++) {
-                timings = {};
-                timings["from"] = result1[i].rows[0]["stop_timing"];
-                bus_timings.push(timings);
-              }
-            })
-            .then(() => {
-              Promise.all(result[1])
-                .then((result2) => {
-                  for (var i = 0; i < bus_rows.length; i++) {
-                    timings = {};
-                    timings["to"] = result2[i].rows[0]["stop_timing"];
-
-                    bus_timings[i]["to"] = timings["to"];
-                  }
-                })
-                .then(() => {
-                  res.send(bus_timings);
-                })
-                .catch((error) => {
-                  console.log(error);
-                });
-            })
-            .catch((error) => {
-              console.log(error);
-            });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
     })
+
 }
 
 // API FOR App
