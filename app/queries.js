@@ -7,6 +7,29 @@ const pool = new Pool({
   port: 5432,
 })
 
+
+class Database {
+  constructor() {
+    this.connection = new Pool({
+      user: 'sreekant',
+      host: 'localhost',
+      database: 'buses',
+      password: '',
+      port: 5432,
+    });
+  }
+  query(sql, args) {
+    return new Promise((resolve, reject) => {
+      this.connection.query(sql, args, (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows);
+      });
+    });
+  }
+}
+
+var database = new Database();
+
 const getBuses = (req, res) => {
   pool.query('SELECT route_name,id from bus_list;', (err, results) => {
     if (err) throw err
@@ -70,10 +93,6 @@ const getBusSuggestion = (req, res) => {
   })
 }
 
-// function delay() {
-//   return new Promise(resolve => setTimeout(resolve, 300));
-// }
-
 var bus_timings = [];
 var timings = {};
 
@@ -86,87 +105,55 @@ const getBusRoutes = (req, res) => {
     return;
   }
 
-  async function delayedLog(item) {
-    // notice that we can await a function
-    // that returns a promise
-    await get_timings(item, to_location, from_location);
-    // console.log(item);
-  }
+  database.query(`select * from bus_list where upper(bus_route) like upper('%${from_location}%${to_location}%');`)
+    .then(results => {
+      var bus_rows = results.rows;
 
-  function get_timings(item, to_location, from_location) {
-    pool.query(`select stop_timing from route_${item["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`, (err2, values) => {
-      if (err2) throw err2;
-      timings["from"] = values.rows[0]["stop_timing"];
-      bus_timings.push(timings["from"]);
-      // console.log(values.rows[0]["stop_timing"]);
+      var bus_timings = [];
+
+      var promiseArryTo = [];
+      var promiseArryFrom = [];
+      for (var i = 0; i < bus_rows.length; i++) {
+        promiseArryTo.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`));
+        promiseArryFrom.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`));
+      }
+
+      var allPromises = [promiseArryFrom, promiseArryTo];
+      Promise.all(allPromises)
+        .then((result) => {
+          Promise.all(result[0])
+            .then((result1) => {
+              for (var i = 0; i < bus_rows.length; i++) {
+                timings = {};
+                timings["from"] = result1[i].rows[0]["stop_timing"];
+                bus_timings.push(timings);
+              }
+            })
+            .then(() => {
+              Promise.all(result[1])
+                .then((result2) => {
+                  for (var i = 0; i < bus_rows.length; i++) {
+                    timings = {};
+                    timings["to"] = result2[i].rows[0]["stop_timing"];
+
+                    bus_timings[i]["to"] = timings["to"];
+                  }
+                })
+                .then(() => {
+                  res.send(bus_timings);
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     })
-    pool.query(`select stop_timing from route_${item["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`, (err2, values) => {
-      if (err2) throw err2;
-      timings["to"] = values.rows[0]["stop_timing"];
-      bus_timings.push(timings["to"]);
-      // console.log(values.rows[0]["stop_timing"]);
-    })
-
-    console.log(bus_timings);
-    return bus_timings;
-  }
-
-  pool.query(`select * from bus_list where upper(bus_route) like upper('%${to_location}%${from_location}%');`, (err1, results) => {
-    if (err1) throw err1;
-    var bus_rows = results.rows;
-
-    if (bus_rows.length) {
-      bus_timings = [];
-      timings = {};
-
-      bus_rows.forEach(async (item, to_location, from_location) => {
-        await delayedLog(item, to_location, from_location);
-      })
-
-      console.log('Done!');
-      res.send('Done!');
-
-      processArray(bus_rows);
-
-      // var timings = {};
-      //
-      // new Promise((resolve, reject) => {
-      //   resolve(get_timings(bus_rows, to_location, from_location));
-      // }).then((value) => {
-      //   console.log(value);
-      //   res.status(200).json(results.rows);
-      //   // expected output: "foo"
-      // });
-
-      // async function processArray(array) {
-      //   // map array to promises
-      //   const promises = array.map(delayedLog);
-      //   // wait until all promises are resolved
-      //   await Promise.all(promises);
-      //   console.log('Done!');
-      // }
-
-      // for (var i = 0; i < results.rows.length; i++) {
-      //   pool.query(`select stop_timing from route_${results.rows[i]["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`, (err2, values) => {
-      //     if (err2) throw err2;
-      //     timings["from"] = values.rows[0]["stop_timing"];
-      //     // console.log(values.rows[0]["stop_timing"]);
-      //   })
-      //   pool.query(`select stop_timing from route_${results.rows[i]["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`, (err2, values) => {
-      //     if (err2) throw err2;
-      //     timings["to"] = values.rows[0]["stop_timing"];
-      //     // console.log(values.rows[0]["stop_timing"]);
-      //   })
-      //   break;
-      // }
-
-      // console.log(timings);
-    } else {
-      res.status(404).send("No buses found!");
-    }
-    // res.status(200).send(`${results.rows.length} buses found!`)
-    // res.status(200).json(results.rows[0])
-  })
 }
 
 // API FOR App
@@ -199,7 +186,4 @@ module.exports = {
   getBusRoutes,
   getAPIBusesFrom,
   getAPIBusesTypes,
-  // createUser,
-  // updateUser,
-  // deleteUser,
 }

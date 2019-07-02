@@ -4,7 +4,7 @@ const app = express()
 const db = require('./queries')
 
 var path = require('path');
-app.set('views', path.join(__dirname, 'app/templates'));
+app.set('views', path.join(__dirname, '/templates'));
 app.set('view engine', 'ejs');
 
 app.use(express.static('app/static'));
