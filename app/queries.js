@@ -7,6 +7,12 @@ const pool = new Pool({
   port: 5432,
 })
 
+// the pool with emit an error on behalf of any idle clients
+// it contains if a backend error or network partition happens
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client', err)
+  process.exit(-1)
+})
 
 class Database {
   constructor() {
@@ -67,14 +73,6 @@ const getBuses = (req, res) => {
 //   })
 // }
 //
-const getBusesById = (request, response) => {
-  const id = parseInt(request.params.id)
-  // pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
-  pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
-    if (error) throw error
-    response.status(200).json(results.rows)
-  })
-}
 
 const getBusSuggestion = (req, res) => {
   // console.log(`key: ${req.query.key}`)
@@ -124,7 +122,7 @@ const getBusRoutes = (req, res) => {
                   timings["via_route"] = bus_rows[i]["via_route"];
 
                   timings["bus_code"] = bus_rows[i]["bus_code"];
-                  timings["from_timing"] = result1[i].rows[0]["stop_timing"];
+                  timings["from_timing"] = result1[i].rows[0]["stop_timing"].substring(0, 5);
                   bus_timings.push(timings);
                 }
               })
@@ -132,7 +130,7 @@ const getBusRoutes = (req, res) => {
                 Promise.all(result[1])
                   .then((result2) => {
                     for (var i = 0; i < bus_rows.length; i++) {
-                      bus_timings[i]["to_timing"] = result2[i].rows[0]["stop_timing"];
+                      bus_timings[i]["to_timing"] = result2[i].rows[0]["stop_timing"].substring(0, 5);
                     }
                   })
                   .then(() => {
@@ -152,7 +150,7 @@ const getBusRoutes = (req, res) => {
           .catch((error) => {
             console.log(error);
           });
-      }else{
+      } else {
         res.end("No buses found!");
       }
     })
@@ -182,11 +180,31 @@ const getAPIBusesTypes = (req, res) => {
   })
 }
 
+const getAPIBusTimings = (req, res) => {
+  const bus_code = parseInt(req.params.id)
+  // console.log(bus_code);
+
+  pool.query(`SELECT * FROM route_${bus_code};`, (error, results) => {
+    if (error) throw error
+    res.status(200).json(results.rows)
+  })
+}
+
+const getBusDetails = (req, res) => {
+  const id = parseInt(req.params.id)
+  // pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
+  pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
+    if (error) throw error
+    res.status(200).json(results.rows)
+  })
+}
+
 module.exports = {
   getBuses,
-  getBusesById,
   getBusSuggestion,
   getBusRoutes,
   getAPIBusesFrom,
   getAPIBusesTypes,
+  getAPIBusTimings,
+  getBusDetails,
 }
