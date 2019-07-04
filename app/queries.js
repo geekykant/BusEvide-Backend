@@ -7,8 +7,6 @@ const pool = new Pool({
   port: 5432,
 })
 
-// the pool with emit an error on behalf of any idle clients
-// it contains if a backend error or network partition happens
 pool.on('error', (err, client) => {
   console.error('Unexpected error on idle client', err)
   process.exit(-1)
@@ -18,7 +16,6 @@ class Database {
   constructor() {
     this.connection = pool
   }
-
   query(sql, args) {
     return new Promise((resolve, reject) => {
       this.connection.query(sql, args, (err, rows) => {
@@ -30,60 +27,25 @@ class Database {
 }
 
 var database = new Database();
-
 const getBuses = (req, res) => {
   pool.query('SELECT route_name,id from bus_list;', (err, results) => {
     if (err) throw err
     var resultt = {};
-
-    // //To add into datbase table the arrivals list
-    // for (var i = 0; i < results.rows.length; i++) {
-    //   lenn = results.rows[i]["route_name"].split("-").length;
-    //   from_location = results.rows[i]["route_name"].split("-")[0].trim();
-    //   to_location = results.rows[i]["route_name"].split("-")[lenn - 1].trim();
-    //
-    //   console.log(`${from_location} : ${to_location} : ${i+1}`);
-    //
-    //   pool.query('UPDATE bus_list SET from_location=$1, to_location=$2 where id=$3;',
-    //     [from_location, to_location, results.rows[i]["id"]], (error, results) => {
-    //       if (error) throw error
-    //     })
-    // }
-
-    // To count the destinations & arrivals
-    // var count = {};
-    // for(var i=0; i<results.rows.length; i++){
-    //   // resultt[i+1] = results.rows[i]["route_name"].split("-")[0].trim();
-    //   if(count[results.rows[i]["route_name"].split("-")[0].trim()] !== undefined){
-    //     count[results.rows[i]["route_name"].split("-")[0].trim()] += 1
-    //   }else {
-    //     count[results.rows[i]["route_name"].split("-")[0].trim()]= 1
-    //   }
-    // }
-    // res.status(200).json(count)
-
     res.status(200).json(results.rows)
   })
 }
 
-// const getUsers = (request, response) => {
-//   pool.query('SELECT * FROM users ORDER BY id ASC', (error, results) => {
-//     if (error) throw error
-//     response.status(200).json(results.rows)
-//   })
-// }
-//
-
 const getBusSuggestion = (req, res) => {
   // console.log(`key: ${req.query.key}`)
-  pool.query(`SELECT bus_stops from bus_locations WHERE upper(bus_stops) like '` + req.query.key.toUpperCase() + `%' order by upper(bus_stops) asc`, (err, results) => {
-    if (err) throw err;
-    var data = [];
-    for (i = 0; i < results.rows.length; i++) {
-      data.push(results.rows[i]["bus_stops"]);
-    }
-    res.end(JSON.stringify(data));
-  })
+  pool.query(`SELECT bus_stops from bus_locations WHERE upper(bus_stops) like $1 order by upper(bus_stops) asc`,
+    [req.query.key.toUpperCase() + "%"], (err, results) => {
+      if (err) throw err;
+      var data = [];
+      for (i = 0; i < results.rows.length; i++) {
+        data.push(results.rows[i]["bus_stops"]);
+      }
+      res.end(JSON.stringify(data));
+    })
 }
 
 const getBusRoutes = (req, res) => {
@@ -95,7 +57,8 @@ const getBusRoutes = (req, res) => {
     return;
   }
 
-  database.query(`select * from bus_list where upper(bus_route) like upper('%${from_location}%${to_location}%') order by bus_code;`)
+  database.query("select * from bus_list where upper(bus_route) like upper($1) order by bus_code;",
+      ["%" + from_location + "%" + to_location + "%"])
     .then(results => {
       var bus_rows = results.rows;
 
@@ -105,8 +68,10 @@ const getBusRoutes = (req, res) => {
         var promiseArryTo = [];
         var promiseArryFrom = [];
         for (var i = 0; i < bus_rows.length; i++) {
-          promiseArryTo.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${to_location}%');`));
-          promiseArryFrom.push(database.query(`select stop_timing from route_${bus_rows[i]["bus_code"]} where upper(bus_stop) like upper('%${from_location}%');`));
+          promiseArryTo.push(database.query(`select stop_timing from ${"route_" + bus_rows[i]["bus_code"]} where upper(bus_stop) like upper($1);`,
+            ["%" + to_location + "%"]));
+          promiseArryFrom.push(database.query(`select stop_timing from ${"route_" + bus_rows[i]["bus_code"]} where upper(bus_stop) like upper($1);`,
+            ["%" + from_location + "%"]));
         }
 
         var allPromises = [promiseArryFrom, promiseArryTo];
@@ -181,8 +146,12 @@ const getAPIBusesTypes = (req, res) => {
 }
 
 const getAPIBusTimings = (req, res) => {
+  if (req.params.id.length > 5) {
+    res.end("You could do better!")
+    return
+  }
+
   const bus_code = parseInt(req.params.id)
-  // console.log(bus_code);
 
   pool.query(`SELECT * FROM route_${bus_code};`, (error, results) => {
     if (error) throw error
@@ -192,8 +161,16 @@ const getAPIBusTimings = (req, res) => {
 
 const getBusDetails = (req, res) => {
   const id = parseInt(req.params.id)
+
   // pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
   pool.query('SELECT * FROM bus_list WHERE bus_code = $1', [id], (error, results) => {
+    if (error) throw error
+    res.status(200).json(results.rows)
+  })
+}
+
+const getHelplineNos = (req, res) => {
+  pool.query('SELECT * FROM helpline_nos;', (error, results) => {
     if (error) throw error
     res.status(200).json(results.rows)
   })
@@ -207,4 +184,5 @@ module.exports = {
   getAPIBusesTypes,
   getAPIBusTimings,
   getBusDetails,
+  getHelplineNos,
 }
