@@ -29,11 +29,11 @@ app.get('/', (request, response) => {
 })
 
 // API for App
-app.get('/api/from_buses', db.getAPIBusesFrom)
-app.get('/api/bus_types', db.getAPIBusesTypes)
-app.get('/api/bus_timings/:id', db.getAPIBusTimings)
-app.get('/api/bus_btw_locations', db.getBusRoutes)
-app.get('/api/helpline_nos', db.getHelplineNos)
+app.get('/from_buses', db.getAPIBusesFrom)
+app.get('/bus_types', db.getAPIBusesTypes)
+app.get('/bus_timings/:id', db.getAPIBusTimings)
+app.get('/bus_btw_locations', db.getBusRoutes)
+app.get('/helpline_nos', db.getHelplineNos)
 
 app.get('/search', db.getBusSuggestion)
 app.get('/bus_search_form', db.getBusRoutes)
