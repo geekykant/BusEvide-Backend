@@ -1,46 +1,19 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const app = express()
-const db = require('./queries')
+const express = require("express");
 
-var path = require('path');
-app.set('views', path.join(__dirname, '/templates'));
-app.set('view engine', 'ejs');
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static('app/static'));
-
-PORT = process.env.PORT || 8080
-
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({
-  extended: true,
-}))
-
-//about
-app.get('/bus_routes', function(req, res) {
-  res.render('home/index');
-  // res.render('404');
+app.get("/", (req, res) => {
+  res.json({
+    message: "Welcome to BusEvide API; By Paavam Devs.",
+  });
 });
 
-app.get('/', (request, response) => {
-  response.json({
-    info: 'Node.js, Express, and Postgres API'
-  })
-})
+const apiRouter = require("./api");
+app.use("/v1", apiRouter);
 
-// API for App
-app.get('/from_buses', db.getAPIBusesFrom)
-app.get('/bus_types', db.getAPIBusesTypes)
-app.get('/bus_timings/:id', db.getAPIBusTimings)
-app.get('/bus_btw_locations', db.getBusRoutes)
-app.get('/helpline_nos', db.getHelplineNos)
-
-app.get('/search', db.getBusSuggestion)
-app.get('/bus_search_form', db.getBusRoutes)
-app.get('/buses', db.getBuses)
-app.get('/buses/:id', db.getBusDetails)
-
-
+var PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`App running on port ${PORT}.`)
-})
+  console.log(`BusEvide app running on port ${PORT}.`);
+});

@@ -1,0 +1,36 @@
+# docker-compose.yml
+version: "3"
+
+services:
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      NODE_ENV: ${NODE_ENV}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - busevide_nt
+
+  db:
+    build: "database/"
+    restart: always
+    # ports:
+    #   - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - busevide_nt
+
+networks:
+  busevide_nt:
+    name: "busevide_network"
+    driver: bridge
